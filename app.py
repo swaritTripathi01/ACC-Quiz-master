@@ -2,14 +2,13 @@ import streamlit as st
 import google.generativeai as genai
 from streamlit_mic_recorder import mic_recorder
 
-# 1. API Key सेटअप
-# हम यह सुनिश्चित कर रहे हैं कि की सीधे streamlit के Secrets से आए
-try:
-    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
-except Exception as e:
-    st.error("API Key नहीं मिल रही है! कृपया Streamlit Settings में 'GOOGLE_API_KEY' सही से सेव करें।")
+# 1. API Key की जांच करें
+if "GOOGLE_API_KEY" not in st.secrets:
+    st.error("त्रुटि: Streamlit Secrets में 'GOOGLE_API_KEY' नहीं मिल रहा है। कृपया सेटिंग्स चेक करें।")
     st.stop()
+
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="ACC एआई शिक्षक", page_icon="🎓")
 
@@ -30,7 +29,7 @@ audio = mic_recorder(start_prompt="🎙️ बोलकर पूछें", sto
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# चैट हिस्ट्री दिखाएं
+# चैट हिस्ट्री
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -44,11 +43,10 @@ if prompt := st.chat_input("अपना सवाल पूछें..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Gemini को कॉल करें
     try:
         response = model.generate_content(SYSTEM_INSTRUCTION + prompt)
         with st.chat_message("assistant"):
             st.markdown(response.text)
         st.session_state.messages.append({"role": "assistant", "content": response.text})
     except Exception as e:
-        st.error("तकनीकी समस्या: कृपया अपनी API Key चेक करें।")
+        st.error(f"Gemini API एरर: {e}")
