@@ -1,6 +1,5 @@
-openai
-langchain
-pillow
 streamlit
+google-generativeai
 streamlit-mic-recorder
+
 
