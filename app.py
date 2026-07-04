@@ -44,9 +44,9 @@ if prompt := st.chat_input("अपना सवाल पूछें..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # OpenAI कॉल
+    # OpenAI कॉल (यहाँ gpt-4o-mini का उपयोग किया गया है)
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=st.session_state.messages
     )
     
