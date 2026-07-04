@@ -1,43 +1,56 @@
 import streamlit as st
 from openai import OpenAI
+from streamlit_mic_recorder import mic_recorder
 
-# 1. आपके 10 नियमों का "दिमाग"
+# Secrets से API Key लें
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+st.set_page_config(page_title="ACC एआई शिक्षक", page_icon="🎓")
+
+# 10 नियमों का मुख्य निर्देश
 SYSTEM_PROMPT = """
-तुम 'स्वरित त्रिपाठी' हो, एसीसी (A.C.C) हायर सेकेंडरी स्कूल के एक अनुभवी और समर्पित शिक्षक हो।
-तुम्हारी कार्यप्रणाली:
-1. हमेशा शालीन, विनम्र और प्रेरक भाषा का प्रयोग करो।
-2. डाउट सॉल्विंग: छात्र से पहले 'क्यों' (Why) वाले सवाल पूछो (Socratic Method), सीधे उत्तर न दो।
-3. केवल 10वीं/12वीं (MP बोर्ड) और JEE के पाठ्यक्रम पर ही चर्चा करो। भटकाव होने पर विनम्रता से वापस लाओ।
-4. टेस्ट का अनुरोध होने पर ही टेस्ट सीरीज दिखाओ।
-5. 10वीं/12वीं के पिछले 6 साल के पेपर और JEE (2014-2026) के आधार पर उत्तर दो।
-6. उत्तर देने की गति बहुत तेज होनी चाहिए।
-7. कठिन विषयों को छोटे लेक्चर के रूप में समझाओ।
-8. 'एसीसी हायर सेकेंडरी स्कूल' की गरिमा बनाए रखो।
-9. हिंदी और अंग्रेजी का मिश्रण इस्तेमाल करो।
-10. हर डाउट को विस्तार से समझाओ।
+तुम स्वरित त्रिपाठी हो, एसीसी हायर सेकेंडरी स्कूल के एक समर्पित एआई शिक्षक।
+1. छात्रों के साथ इंसान की तरह बात करो।
+2. MP Board (10वीं/12वीं) और JEE Mains (पिछले 11 साल) के विशेषज्ञ हो।
+3. छात्र जब तक 'Test' न कहे, सीधे उत्तर न दो, Socratic method (Why/कैसे) से समझाओ।
+4. छात्र के डाउट फोटो के रूप में आने पर उसे स्टेप-बाय-स्टेप हिंदी में समझाओ।
+5. 10वीं/12वीं की पूरी किताबों के MP बोर्ड पैटर्न पर आधारित ऑब्जेक्टिव सवाल पूछ सकते हो।
+6. केवल शिक्षा से संबंधित विषयों पर बात करो।
+7. उत्तर अत्यंत तेज गति से दो।
+8. JEE Mains के लिए अलग से 'JEE Test' का विकल्प दो।
+9. अगर छात्र कहे तो पूरी टेस्ट सीरीज दिखाओ।
+10. हमेशा विनम्र और प्रेरक रहो।
 """
 
-st.title("एसीसी स्कूल एआई शिक्षक")
-st.subheader("नमस्कार! मैं स्वरित त्रिपाठी हूँ, मैं आपकी कैसे मदद कर सकता हूँ?")
+st.title("🎓 ACC हायर सेकेंडरी स्कूल एआई शिक्षक")
 
-# 2. चैट इंटरफेस
+# वॉइस रिकॉर्डर बटन
+st.write("बोलकर सवाल पूछने के लिए नीचे बटन दबाएं:")
+audio = mic_recorder(start_prompt="🎙️ रिकॉर्डिंग शुरू करें", stop_prompt="⏹️ रुकें", just_once=True)
+
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+# चैट इंटरफेस
 for message in st.session_state.messages:
     if message["role"] != "system":
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 3. जवाब देने का लॉजिक
-if prompt := st.chat_input("अपना सवाल यहाँ लिखें..."):
+# इनपुट (फोटो अपलोड और टेक्स्ट)
+uploaded_file = st.file_uploader("डाउट की फोटो यहाँ भेजें...", type=["jpg", "png"])
+if prompt := st.chat_input("अपना सवाल पूछें..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        # यहाँ आपका एआई मॉडल छात्र को जवाब देगा
-        response = "यह एक उदाहरण है। यहाँ आपका एआई मॉडल आपके द्वारा दी गई PDF फाइलों से सर्च करके जवाब देगा।"
-        st.markdown(response)
+    # OpenAI कॉल
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=st.session_state.messages
+    )
     
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    answer = response.choices[0].message.content
+    with st.chat_message("assistant"):
+        st.markdown(answer)
+    st.session_state.messages.append({"role": "assistant", "content": answer})
